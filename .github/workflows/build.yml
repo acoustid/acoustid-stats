@@ -1,0 +1,95 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: [ '3.10' ]
+
+    services:
+      postgresql:
+        image: quay.io/acoustid/postgresql:master
+        ports:
+          - 5432/tcp
+        env:
+          POSTGRES_USER: acoustid
+          POSTGRES_PASSWORD: acoustid
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+
+      - name: Checkout source code
+        uses: actions/checkout@v1
+
+      - name: Install python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - name: Install poetry
+        run: pip install poetry
+
+#      - name: Setup database
+#        run: |
+#          container=$(docker ps -q -f expose=5432)
+#          docker exec -i -e PGUSER=$PGUSER -e PGPASSWORD=$PGPASSWORD -e PGDATABASE=$PGDATABASE $container psql < ./admin/ci/create_db.sql
+#        env:
+#          PGUSER: acoustid
+#          PGPASSWORD: acoustid
+#          PGDATABASE: postgres
+
+      - name: Run tests
+        run: ./check.sh
+        env:
+          PYTHON_VERSION: ${{ matrix.python_version }}
+          ACOUSTID_STATS_TEST_DATABASE_HOST: localhost
+          ACOUSTID_STATS_TEST_DATABASE_PORT: ${{ job.services.postgresql.ports['5432'] }}
+          ACOUSTID_STATS_TEST_DATABASE_NAME: acoustid
+          ACOUSTID_STATS_TEST_DATABASE_USER: acoustid
+          ACOUSTID_STATS_TEST_DATABASE_PASSWORD: acoustid
+
+  build-image:
+    runs-on: ubuntu-latest
+    needs: [ test ]
+
+    steps:
+    
+      - name: Check out code
+        uses: actions/checkout@v1
+
+      - name: Log in to the Container registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
