@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+message SearchRequestDetails {
+    string application_id = 1;
+    string user_agent = 2;
+    string user_ip = 3;
+    int32 status = 4;
+    int32 num_results = 5;
+};
+
+service AcoustidRealTimeStats {
+    rpc OnSearchRequest(SearchRequestDetails) returns (google.protobuf.Empty);
+}

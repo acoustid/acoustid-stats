@@ -2,7 +2,7 @@
 
 set -eux
 
-poetry run pylint acoustid_stats/
-poetry run flake8 acoustid_stats/
-poetry run mypy acoustid_stats/
-poetry run pytest -v acoustid_stats/
+poetry run pylint acoustid_stats/ tests/
+poetry run flake8 acoustid_stats/ tests/
+poetry run mypy acoustid_stats/ tests/
+poetry run pytest -v tests/

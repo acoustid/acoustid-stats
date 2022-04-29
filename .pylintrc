@@ -1,4 +1,7 @@
 [MASTER]
+ignore=
+  acoustid_stats_pb2.py,
+  acoustid_stats_pb2_grpc.py
 disable=
-    C0114, # issing module docstring (missing-module-docstring)
-    C0116, # Missing function or method docstring (missing-function-docstring)
+  C0114, # issing module docstring (missing-module-docstring)
+  C0116  # Missing function or method docstring (missing-function-docstring)
